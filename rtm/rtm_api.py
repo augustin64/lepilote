@@ -4,10 +4,14 @@ import requests
 import json
 import time
 
+null = None #simplify json responses
+false = False
+true = True
+
 class BusLign():
-    def __init__(self,name:str='',id:str='') :
+    def __init__(self,name:str='',ID:str='') :
         
-        if name == '' and id == '':
+        if name == '' and ID == '':
             raise Exception('you need to specify at least one argument')
         path = os.path.join(Path(__file__).parent, "data/lignes.json")
 
@@ -17,13 +21,13 @@ class BusLign():
 
         if name != '' :
             self.name = name
-            if id == '' :
-                self.id = lignes[self.name]["ID"]
+            if ID == '' :
+                self.ID = lignes[self.name]["ID"]
 
-        elif id != '' :
-            self.id = id
+        elif ID != '' :
+            self.ID = ID
             if name == '' :
-                self.name = [ i for i in lignes.keys() if lignes[i]["ID"] == self.id ][0]
+                self.name = [ i for i in lignes.keys() if lignes[i]["ID"] == self.ID ][0]
 
         self.LNE = lignes[self.name]['LNE']
 
@@ -69,12 +73,17 @@ class BusDirection() :
 class BusStop():
     def __init__(self,parent=None,name:str='',ID:str='0'):
         self.name=name
-        self.parent=parent
         self.ID=ID
         self.parent=parent
 
     def __repr__(self):
         return(self.name)
 
-    def get_schedule(self,hr:int):
-        None
+    def get_schedule(self,date=time.strftime("%Y-%m-%d_%H-%M", time.gmtime())):     #Ask for the next bus if no time specified
+        url = "https://api.rtm.fr/front/lepilote/GetStopHours/json"                 #Time format must be yyyy-MM-dd or yyyy-MM-dd_HH-mm
+        url += "?StopIds=" + self.ID
+        url += "&DateTime=" + date
+        url += "&LineId=" + self.parent.parent.ID
+        url += "&Direction=" + self.parent.ID
+        content = eval(requests.get(url).text)['Data']['Hours']
+        print(json.dumps(content))
