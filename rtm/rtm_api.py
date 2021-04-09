@@ -2,9 +2,10 @@ from pathlib import Path
 import os
 import requests
 import json
+import time
 
 class BusLign():
-    def __init__(self,name: str='',id: str='') :
+    def __init__(self,name:str='',id:str='') :
         
         if name == '' and id == '':
             raise Exception('you need to specify at least one argument')
@@ -45,7 +46,7 @@ class BusLign():
 
 
 class BusDirection() :
-    def __init__(self,parent=None,name='',ID='0',RefNETEX=''):
+    def __init__(self,parent=None,name:str='',ID:str='0',RefNETEX:str=''):
         self.ID=ID
         self.name=name
         self.parent=parent
@@ -53,4 +54,28 @@ class BusDirection() :
     
     def __repr__(self):
         return(json.dumps({'ID':self.ID,'Name':self.name,'parent':str(self.parent)},indent=4))
-        
+
+    def get_stops(self):
+        url = 'https://api.rtm.fr/front/getStations/' + self.RefNETEX
+        content = eval(requests.get(url).text)['data']
+        stops = []
+
+        for i in range(len(content)) :
+            stop = ([content[i]['sqlistationId']],content[i]['Name'])
+            stops.append(stop)
+
+        self.stops = stops
+        return(stops)
+
+class BusStop():
+    def __init__(self,parent=None,name:str='',ID:str='0'):
+        self.name=name
+        self.parent=parent
+        self.ID=ID
+        self.parent=parent
+
+    def __repr__(self):
+        return(self.name)
+
+    def get_schedule(self,hr:int):
+        None
