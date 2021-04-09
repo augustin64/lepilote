@@ -8,103 +8,109 @@ null = None #simplify json responses
 false = False
 true = True
 
-class BusLign():
-    def __init__(self,name:str='',ID:str='') :
+class Schedules():
+    def __init__(self):
+        """Just a subclass"""
+        None
+
+
+    class BusLign():
+        def __init__(self,name:str='',ID:str='') :
+            
+            if name == '' and ID == '':
+                raise Exception('you need to specify at least one argument')
+            path = os.path.join(Path(__file__).parent, "data/lignes.json")
+
+            with open(path, 'r') as f:
+                data=f.read()
+            lignes = json.loads(data)
+
+            if name != '' :
+                self.name = name
+                if ID == '' :
+                    self.ID = lignes[self.name]["ID"]
+
+            elif ID != '' :
+                self.ID = ID
+                if name == '' :
+                    self.name = [ i for i in lignes.keys() if lignes[i]["ID"] == self.ID ][0]
+
+            self.LNE = lignes[self.name]['LNE']
+
+        def __repr__(self):
+            return(self.name)
+
+        def get_routes(self):
+            url = "https://api.rtm.fr/front/getRoutes/" + self.LNE
+            content = eval(requests.get(url).text)['data']
+            directions = []
+            for i in content.keys():
+                directions.append(Schedules.BusDirection(
+                    parent=self,
+                    name=content[i]['DirectionStations'],
+                    ID=content[i]['DirectionRef'],
+                    RefNETEX=content[i]['refNEtex']
+                    ))
+            self.routes = directions
+            return(directions)
+
+
+    class BusDirection() :
+        def __init__(self,parent=None,name:str='',ID:str='0',RefNETEX:str=''):
+            self.ID=ID
+            self.name=name
+            self.parent=parent
+            self.RefNETEX=RefNETEX
         
-        if name == '' and ID == '':
-            raise Exception('you need to specify at least one argument')
-        path = os.path.join(Path(__file__).parent, "data/lignes.json")
+        def __repr__(self):
+            return(json.dumps({'ID':self.ID,'Name':self.name,'parent':str(self.parent)},indent=4))
 
-        with open(path, 'r') as f:
-            data=f.read()
-        lignes = json.loads(data)
+        def get_stops(self):
+            url = 'https://api.rtm.fr/front/getStations/' + self.RefNETEX
+            content = eval(requests.get(url).text)['data']
+            stops = []
 
-        if name != '' :
-            self.name = name
-            if ID == '' :
-                self.ID = lignes[self.name]["ID"]
+            for i in range(len(content)) :
+                stops.append(Schedules.BusStop(parent=self,name=content[i]['Name'],ID=content[i]['sqlistationId']))
 
-        elif ID != '' :
-            self.ID = ID
-            if name == '' :
-                self.name = [ i for i in lignes.keys() if lignes[i]["ID"] == self.ID ][0]
+            self.stops = stops
+            return(stops)
 
-        self.LNE = lignes[self.name]['LNE']
+    class BusStop():
+        def __init__(self,parent=None,name:str='',ID:str='0'):
+            self.name=name
+            self.ID=ID
+            self.parent=parent
 
-    def __repr__(self):
-        return(self.name)
+        def __repr__(self):
+            return(self.name)
 
-    def get_routes(self):
-        url = "https://api.rtm.fr/front/getRoutes/" + self.LNE
-        content = eval(requests.get(url).text)['data']
-        directions = []
-        for i in content.keys():
-            directions.append(BusDirection(
-                parent=self,
-                name=content[i]['DirectionStations'],
-                ID=content[i]['DirectionRef'],
-                RefNETEX=content[i]['refNEtex']
-                ))
-        self.routes = directions
-        return(directions)
+        def get_schedule(self,date=time.strftime("%Y-%m-%d_%H-%M", time.gmtime())):     #Ask for the next bus if no time specified
+            url = "https://api.rtm.fr/front/lepilote/GetStopHours/json"                 #Time format must be yyyy-MM-dd or yyyy-MM-dd_HH-mm
+            url += "?StopIds=" + self.ID
+            url += "&DateTime=" + date
+            url += "&LineId=" + self.parent.parent.ID
+            url += "&Direction=" + self.parent.ID
+            content = eval(requests.get(url).text)['Data']['Hours']
+            self.schedules = [Schedules.Hour(data,parent=self) for data in content]
+            return(self.schedules)
 
-
-class BusDirection() :
-    def __init__(self,parent=None,name:str='',ID:str='0',RefNETEX:str=''):
-        self.ID=ID
-        self.name=name
-        self.parent=parent
-        self.RefNETEX=RefNETEX
-    
-    def __repr__(self):
-        return(json.dumps({'ID':self.ID,'Name':self.name,'parent':str(self.parent)},indent=4))
-
-    def get_stops(self):
-        url = 'https://api.rtm.fr/front/getStations/' + self.RefNETEX
-        content = eval(requests.get(url).text)['data']
-        stops = []
-
-        for i in range(len(content)) :
-            stops.append(BusStop(parent=self,name=content[i]['Name'],ID=content[i]['sqlistationId']))
-
-        self.stops = stops
-        return(stops)
-
-class BusStop():
-    def __init__(self,parent=None,name:str='',ID:str='0'):
-        self.name=name
-        self.ID=ID
-        self.parent=parent
-
-    def __repr__(self):
-        return(self.name)
-
-    def get_schedule(self,date=time.strftime("%Y-%m-%d_%H-%M", time.gmtime())):     #Ask for the next bus if no time specified
-        url = "https://api.rtm.fr/front/lepilote/GetStopHours/json"                 #Time format must be yyyy-MM-dd or yyyy-MM-dd_HH-mm
-        url += "?StopIds=" + self.ID
-        url += "&DateTime=" + date
-        url += "&LineId=" + self.parent.parent.ID
-        url += "&Direction=" + self.parent.ID
-        content = eval(requests.get(url).text)['Data']['Hours']
-        self.schedules = [Hour(data,parent=self) for data in content]
-        return(self.schedules)
-
-class Hour():
-    def __init__(self,data,parent=None):
-        self.parent = parent
-        self.AimedArrivalTime = data['AimedArrivalTime']
-        self.AimedDepartureTime = data['AimedDepartureTime']
-        self.FrequencyId = data['FrequencyId']
-        self.IsCancelled = data['IsCancelled']
-        self.LineId = data['LineId']
-        self.Order = data['Order']
-        self.PredictedArrivalTime = data['PredictedArrivalTime']
-        self.PredictedDepartureTime = data['PredictedDepartureTime']
-        self.RealArrivalTime = data['RealArrivalTime']
-        self.RealDepartureTime = data['RealDepartureTime']
-        self.RealTimeStatus = data['RealTimeStatus']
-        self.Restriction = data['Restriction']
-        self.StopId = data['StopId']
-        self.TheoricArrivalTime = data['TheoricArrivalTime']
-        self.TheoricDepartureTime = data['TheoricDepartureTime']
-        self.VehicleJourneyId = data['VehicleJourneyId']
+    class Hour():
+        def __init__(self,data,parent=None):
+            self.parent = parent
+            self.AimedArrivalTime = data['AimedArrivalTime']
+            self.AimedDepartureTime = data['AimedDepartureTime']
+            self.FrequencyId = data['FrequencyId']
+            self.IsCancelled = data['IsCancelled']
+            self.LineId = data['LineId']
+            self.Order = data['Order']
+            self.PredictedArrivalTime = data['PredictedArrivalTime']
+            self.PredictedDepartureTime = data['PredictedDepartureTime']
+            self.RealArrivalTime = data['RealArrivalTime']
+            self.RealDepartureTime = data['RealDepartureTime']
+            self.RealTimeStatus = data['RealTimeStatus']
+            self.Restriction = data['Restriction']
+            self.StopId = data['StopId']
+            self.TheoricArrivalTime = data['TheoricArrivalTime']
+            self.TheoricDepartureTime = data['TheoricDepartureTime']
+            self.VehicleJourneyId = data['VehicleJourneyId']
