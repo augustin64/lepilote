@@ -61,8 +61,7 @@ class BusDirection() :
         stops = []
 
         for i in range(len(content)) :
-            stop = ([content[i]['sqlistationId']],content[i]['Name'])
-            stops.append(stop)
+            stops.append(BusStop(parent=self,name=content[i]['Name'],ID=content[i]['sqlistationId']))
 
         self.stops = stops
         return(stops)
