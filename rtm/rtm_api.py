@@ -86,4 +86,26 @@ class BusStop():
         url += "&LineId=" + self.parent.parent.ID
         url += "&Direction=" + self.parent.ID
         content = eval(requests.get(url).text)['Data']['Hours']
-        print(json.dumps(content))
+        self.schedules = [Hour(data,parent=self) for data in content]
+        return(self.schedules)
+
+class Hour():
+    def __init__(self,data,parent=None):
+        self.parent = parent
+        print(data)
+        self.AimedArrivalTime = data['AimedArrivalTime']
+        self.AimedDepartureTime = data['AimedDepartureTime']
+        self.FrequencyId = data['FrequencyId']
+        self.IsCancelled = data['IsCancelled']
+        self.LineId = data['LineId']
+        self.Order = data['Order']
+        self.PredictedArrivalTime = data['PredictedArrivalTime']
+        self.PredictedDepartureTime = data['PredictedDepartureTime']
+        self.RealArrivalTime = data['RealArrivalTime']
+        self.RealDepartureTime = data['RealDepartureTime']
+        self.RealTimeStatus = data['RealTimeStatus']
+        self.Restriction = data['Restriction']
+        self.StopId = data['StopId']
+        self.TheoricArrivalTime = data['TheoricArrivalTime']
+        self.TheoricDepartureTime = data['TheoricDepartureTime']
+        self.VehicleJourneyId = data['VehicleJourneyId']
