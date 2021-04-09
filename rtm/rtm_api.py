@@ -15,8 +15,9 @@ class Schedules():
 
 
     class BusLign():
-        def __init__(self,name:str='',ID:str='') :
-            
+        def __init__(self,name:str='',ID:str='',color='#000000') :
+            self.color = color
+
             if name == '' and ID == '':
                 raise Exception('you need to specify at least one argument')
             path = os.path.join(Path(__file__).parent, "data/lignes.json")
@@ -114,3 +115,25 @@ class Schedules():
             self.TheoricArrivalTime = data['TheoricArrivalTime']
             self.TheoricDepartureTime = data['TheoricDepartureTime']
             self.VehicleJourneyId = data['VehicleJourneyId']
+
+def get_alerts(period='Today',LNE=None):
+    """
+    period=today|coming|all
+    LNE=bus/metro/tram id
+    """
+    if LNE == None :
+        url = 'https://api.rtm.fr/front/getAlertes/FR/All'
+        content = eval(requests.get(url).text)['data']
+        AlertesToday = [Alert(data) for data in content['AlertesToday']]
+        AlertesComing = [Alert(data) for data in content['AlertesComing']]
+    else :
+        url = 'https://api.rtm.fr/front/getAlertes/FR/' + LNE
+        content = eval(requests.get(url).text)['data']
+        AlertesToday = [Alert(data) for data in content['Alertes']]
+        AlertesComing = []
+
+
+
+class Alert():
+    def __init__(self,data):
+        None
