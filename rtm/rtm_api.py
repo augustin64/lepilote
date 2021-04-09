@@ -30,3 +30,13 @@ class BusLign():
     def get_routes(self):
         url = "https://api.rtm.fr/front/getRoutes/" + self.LNE
         content = eval(requests.get(url).text)['data']
+
+class BusDirection() :
+    def __init__(self,parent=None,name='',ID='0'):
+        self.ID=ID
+        self.name=name
+        self.parent=parent
+    
+    def __repr__(self):
+        return({'ID':self.ID,'Name':self.name,'parent':self.parent})
+        
