@@ -92,7 +92,6 @@ class BusStop():
 class Hour():
     def __init__(self,data,parent=None):
         self.parent = parent
-        print(data)
         self.AimedArrivalTime = data['AimedArrivalTime']
         self.AimedDepartureTime = data['AimedDepartureTime']
         self.FrequencyId = data['FrequencyId']
