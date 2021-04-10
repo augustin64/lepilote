@@ -20,7 +20,11 @@ class BusLine():
             data=f.read()
         lines = json.loads(data)
 
-        if name != '' :
+        if name != '' and ID != '':
+            self.ID = ID
+            self.name = name
+
+        elif name != '' :
             self.name = name
             if ID == '' :
                 self.ID = lines[self.name]["ID"]
@@ -130,6 +134,13 @@ def get_alerts(period='Today',LNE=None):
         AlertesToday = [Alert(data) for data in content['Alertes']]
         AlertesComing = []
 
+    if period == 'today':
+        return AlertesToday
+    elif period == 'coming' :
+        return AlertesComing
+    else :
+        return {'AlertesToday':AlertesToday, 'AlertesComing':AlertesComing}
+
 
 
 class Alert():
@@ -143,4 +154,9 @@ class Alert():
         self.validite = data['MessageC']
         self.html = data['MessageD']
         self.type = data['type']
-        self.AffectedLine = [BusLine(name=i['NAME']) for i in data['AffectedLine']]
+        self.AffectedLine = []
+        for i in data ['AffectedLine'] :
+            try :
+                self.AffectedLine.append(BusLine(name=i['PublicCode'],color=i['color']))
+            except Exception as e:
+                print('cannot find',e)
