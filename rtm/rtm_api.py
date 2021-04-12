@@ -1,5 +1,3 @@
-from pathlib import Path
-import os
 import requests
 import json
 import time
@@ -11,18 +9,14 @@ true = True
 class Line():
     def __init__(self,data) :
         base_informations = ['name', 'id', 'Carrier', 'Operator', 'PublicCode', 'TypeOfLine', 'VehicleType', 'night', 'lepiloteId', 'color', 'sqliType']
-
+        self.id = ''
+        self.lepiloteId = ''
+        self.PublicCode = ''
         if 'id' in data.keys():
             self.id = data['id']
-            self.lepiloteId = ''
-            self.PublicCode = ''
         elif 'lepiloteId' in data.keys():
-            self.id = ''
             self.lepiloteId = data['lepiloteId']
-            self.PublicCode = ""
         elif 'PublicCode' in data.keys():
-            self.id = ''
-            self.lepiloteId = ''
             self.PublicCode = data['PublicCode']
         else :
             raise Exception('You must give id, lepiloteId or PublicCode to identify the line')
@@ -94,53 +88,25 @@ class Schedules():
             base_informations = ['id', 'refNEtex', 'sqlistationId', 'sqlilineNumber', 'pointId', 'lineId', 'sqliOrdering', 'DirectionRef', 'Direction', 'operator', 'lineRef', 'DirectionStations', 'DirectionStationsSqli']
 
             if False in [False for i in base_informations if i not in data.keys()]:
+                self.id = ''
+                self.refNEtex = ''
+                self.sqlistationId = ''
+                self.DirectionRef = ''
+                self.Direction = ''
+                self.DirectionStations = ''
+
                 if 'id' in data :
                     self.id = data['id']
-                    self.refNEtex = ''
-                    self.sqlistationId = ''
-                    self.DirectionRef = ''
-                    self.Direction = ''
-                    self.DirectionStations = ''
-
                 elif 'refNEtex' in data:
                     self.refNEtex = data['refNEtex']
-                    self.id = ''
-                    self.sqlistationId = ''
-                    self.DirectionRef = ''
-                    self.Direction = ''
-                    self.DirectionStations = ''
-
                 elif 'sqlistationId' in data:
                     self.sqlistationId = data['sqlistationId']
-                    self.id = ''
-                    self.refNEtex = ''
-                    self.DirectionRef = ''
-                    self.Direction = ''
-                    self.DirectionStations = ''
-
                 elif 'DirectionRef' in data:
                     self.DirectionRef = data['DirectionRef']
-                    self.id = ''
-                    self.refNEtex = ''
-                    self.sqlistationId = ''
-                    self.Direction = ''
-                    self.DirectionStations = ''
-
                 elif 'Direction' in data:
                     self.Direction = data['Direction']
-                    self.id = ''
-                    self.refNEtex = ''
-                    self.sqlistationId = ''
-                    self.DirectionRef = ''
-                    self.DirectionStations = ''
-
                 elif 'DirectionStations' in data:
                     self.DirectionStations = data['DirectionStations']
-                    self.id = ''
-                    self.refNEtex = ''
-                    self.sqlistationId = ''
-                    self.DirectionRef = ''
-                    self.Direction = ''
 
                 else :
                     raise Exception('You must specify at least one information')
@@ -189,17 +155,98 @@ class Schedules():
             stops = []
 
             for i in content :
-                stops.append(Schedules.Stop(i,parent=self))
-
+                stops.append(Schedules.Stop(i,self))
             self.stops = stops
             return(stops)
 
     class Stop():
-        def __init__(self,data,parent=None):
-            self.Description = data['Description']
-            self.Name = data['Name']
-            self.sqlistationId=data['sqlistationId']
-            self.parent=parent
+        def __init__(self,data,parent):
+            self.parent = parent
+            base_informations = ['id', 'refNEtex', 'sqlistationId', 'sqlilineNumber', 'pointId', 'lineId', 'operator', 'lineRef', 'Name', 'Description', 'StopRef', 'type', 'postCode', 'Longitude', 'Latitude', 'sqliLepiloteId', 'pmr', 'code3l', 'PdfNameHoraire']
+            if False in [False for i in base_informations if i not in data.keys()]:
+                self.id = ''
+                self.refNEtex = ''
+                self.sqlistationId = ''
+                self.pointId = ''
+                self.Name = ''
+                self.StopRef = ''
+                self.Longitude = None
+                self.Latitude = None
+                self.sqliLepiloteId = ''
+
+                if 'id' in data.keys() :
+                    self.id = data['id']
+                elif 'refNEtex' in data.keys():         # Un seul des identifiants est nécessaire pour
+                    self.refNEtex = data['refNEtex']    # Identifier l'arrêt, donc on n'en acceptera qu'un
+                elif 'sqlistationId' in data.keys():    # seul dans des soucis d'optimisation
+                    self.sqlistationId = data['sqlistationId']
+                elif 'pointId' in data.keys():
+                    self.pointId = data['pointId']
+                elif 'Name' in data.keys():
+                    self.Name = data['Name']
+                elif 'StopRef' in data.keys():
+                    self.StopRef = data['StopRef']
+                elif 'sqliLepiloteId' in data.keys():
+                    self.sqliLepiloteId = data['sqliLepiloteId']
+                elif 'Longitude' in data.keys() and 'Latitude' in data.keys():
+                    self.Longitude = data['Longitude']
+                    self.Latitude = data['Latitude']
+
+                url = 'https://api.rtm.fr/front/getStations/' + self.parent.refNEtex
+                content = eval(requests.get(url).text)['data']
+
+                for i in content :
+                    if (
+                        i['id'] == self.id or
+                        i['refNEtex'] == self.refNEtex or
+                        i['sqlistationId'] == self.sqlistationId or
+                        i['pointId'] == self.pointId or
+                        i['Name'] == self.Name or
+                        i['StopRef'] == self.StopRef or
+                        i['sqliLepiloteId'] == self.sqliLepiloteId or
+                        (i['Longitude'] == self.Longitude and i['Latitude'] == self.Latitude and self.Latitude != '')) :
+                        
+                        self.id = i['id']
+                        self.refNEtex = i['refNEtex']
+                        self.sqlistationId = i['sqlistationId']
+                        self.sqlilineNumber = i['sqlilineNumber']
+                        self.pointId = i['pointId']
+                        self.lineId = i['lineId']
+                        self.operator = i['operator']
+                        self.lineRef = i['lineRef']
+                        self.Name = i['Name']
+                        self.Description = i['Description']
+                        self.StopRef = i['StopRef']
+                        self.type = i['type']
+                        self.postCode = i['postCode']
+                        self.Longitude = i['Longitude']
+                        self.Latitude = i['Latitude']
+                        self.sqliLepiloteId = i['sqliLepiloteId']
+                        self.pmr = i['pmr']
+                        self.code3l = i['code3l']
+                        self.PdfNameHoraire = i['PdfNameHoraire']
+                        break
+                
+            else :
+                self.id = data['id']
+                self.refNEtex = data['refNEtex']
+                self.sqlistationId = data['sqlistationId']
+                self.sqlilineNumber = data['sqlilineNumber']
+                self.pointId = data['pointId']
+                self.lineId = data['lineId']
+                self.operator = data['operator']
+                self.lineRef = data['lineRef']
+                self.Name = data['Name']
+                self.Description = data['Description']
+                self.StopRef = data['StopRef']
+                self.type = data['type']
+                self.postCode = data['postCode']
+                self.Longitude = data['Longitude']
+                self.Latitude = data['Latitude']
+                self.sqliLepiloteId = data['sqliLepiloteId']
+                self.pmr = data['pmr']
+                self.code3l = data['code3l']
+                self.PdfNameHoraire = data['PdfNameHoraire']
 
         def __repr__(self):
             return(self.Name)
@@ -273,8 +320,6 @@ def get_lines(type='all'):
         content = eval(requests.get('https://api.rtm.fr/front/getLines/'+type).text)['data']
 
     return content
-
-
 
 
 class Alert():
