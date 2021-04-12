@@ -8,48 +8,68 @@ null = None #simplify json responses
 false = False
 true = True
 
-class BusLine():
-    def __init__(self,name:str='',ID:str='',color='#000000') :
-        self.color = color
+class Line():
+    def __init__(self,data) :
+        base_informations = ['name', 'id', 'Carrier', 'Operator', 'PublicCode', 'TypeOfLine', 'VehicleType', 'night', 'lepiloteId', 'color', 'sqliType']
 
-        if name == '' and ID == '':
-            raise Exception('you need to specify at least one argument')
-        path = os.path.join(Path(__file__).parent, "data/lines.json")
+        if 'id' in data.keys():
+            self.id = data['id']
+            self.lepiloteId = ''
+            self.PublicCode = ''
+        elif 'lepiloteId' in data.keys():
+            self.id = ''
+            self.lepiloteId = data['lepiloteId']
+            self.PublicCode = ""
+        elif 'PublicCode' in data.keys():
+            self.id = ''
+            self.lepiloteId = ''
+            self.PublicCode = data['PublicCode']
+        else :
+            raise Exception('You must give id, lepiloteId or PublicCode to identify the line')
 
-        with open(path, 'r') as f:
-            data=f.read()
-        lines = json.loads(data)
+        if False in [False for i in base_informations if i not in data.keys()]:
+            if 'sqliType' in data.keys():
+                lines = get_lines(type=data['sqliType'])
+            else :
+                content = get_lines(type='all')
+                lines = {}
+                [lines.update(content[i]) for i in content.keys()]
 
-        if name != '' and ID != '':
-            self.ID = ID
-            self.name = name
+            for i in lines.keys():
+                if lines[i]['id'] == self.id or lines[i]['lepiloteId'] == self.lepiloteId or lines[i]['PublicCode'] == self.PublicCode :
+                    self.name = lines[i]['name']
+                    self.id = lines[i]['id']
+                    self.Carrier = lines[i]['Carrier']
+                    self.Operator = lines[i]['Operator']
+                    self.PublicCode = lines[i]['PublicCode']
+                    self.TypeOfLine = lines[i]['TypeOfLine']
+                    self.VehicleType = lines[i]['VehicleType']
+                    self.night = lines[i]['night']
+                    self.lepiloteId = lines[i]['lepiloteId']
+                    self.color = lines[i]['color']
+                    self.sqliType = lines[i]['sqliType']
+                    break
 
-        elif name != '' :
-            self.name = name
-            if ID == '' :
-                self.ID = lines[self.name]["ID"]
+        else :
+            self.name = data['name']
+            self.id = data['id']
+            self.Carrier = data['Carrier']
+            self.Operator = data['Operator']
+            self.PublicCode = data['PublicCode']
+            self.TypeOfLine = data['TypeOfLine']
+            self.VehicleType = data['VehicleType']
+            self.night = data['night']
+            self.lepiloteId = data['lepiloteId']
+            self.color = data['color']
+            self.sqliType = data['sqliType']
 
-        elif ID != '' :
-            self.ID = ID
-            if name == '' :
-                self.name = [ i for i in lines.keys() if lines[i]["ID"] == self.ID ][0]
-
-        self.LNE = lines[self.name]['LNE']
-
-    def __repr__(self):
-        return(self.name)
 
     def get_routes(self):
-        url = "https://api.rtm.fr/front/getRoutes/" + self.LNE
+        url = "https://api.rtm.fr/front/getRoutes/" + self.id
         content = eval(requests.get(url).text)['data']
         directions = []
         for i in content.keys():
-            directions.append(Schedules.BusDirection(
-                parent=self,
-                name=content[i]['DirectionStations'],
-                ID=content[i]['DirectionRef'],
-                RefNETEX=content[i]['refNEtex']
-                ))
+            directions.append(Schedules.Direction(content[i],parent=self))
         self.routes = directions
         return(directions)
 
@@ -58,43 +78,140 @@ class Schedules():
         """Just a subclass"""
         None
 
-    class BusDirection() :
-        def __init__(self,parent=None,name:str='',ID:str='0',RefNETEX:str=''):
-            self.ID=ID
-            self.name=name
+    class Direction() :
+        def __init__(self,data,parent=None):
             self.parent=parent
-            self.RefNETEX=RefNETEX
-        
+            if self.parent.id != None:
+                self.lineRef = self.parent.id
+            elif data['lineRef'] != None :
+                self.lineRef = data['lineRef']
+            else :
+                self.lineRef = Line(data).id
+
+            if self.parent == None and 'lineRef' not in data and 'sqlilineNumber' not in data :
+                raise Exception('You must specify at least parent, lineRef or sqlilinenumber')
+
+            base_informations = ['id', 'refNEtex', 'sqlistationId', 'sqlilineNumber', 'pointId', 'lineId', 'sqliOrdering', 'DirectionRef', 'Direction', 'operator', 'lineRef', 'DirectionStations', 'DirectionStationsSqli']
+
+            if False in [False for i in base_informations if i not in data.keys()]:
+                if 'id' in data :
+                    self.id = data['id']
+                    self.refNEtex = ''
+                    self.sqlistationId = ''
+                    self.DirectionRef = ''
+                    self.Direction = ''
+                    self.DirectionStations = ''
+
+                elif 'refNEtex' in data:
+                    self.refNEtex = data['refNEtex']
+                    self.id = ''
+                    self.sqlistationId = ''
+                    self.DirectionRef = ''
+                    self.Direction = ''
+                    self.DirectionStations = ''
+
+                elif 'sqlistationId' in data:
+                    self.sqlistationId = data['sqlistationId']
+                    self.id = ''
+                    self.refNEtex = ''
+                    self.DirectionRef = ''
+                    self.Direction = ''
+                    self.DirectionStations = ''
+
+                elif 'DirectionRef' in data:
+                    self.DirectionRef = data['DirectionRef']
+                    self.id = ''
+                    self.refNEtex = ''
+                    self.sqlistationId = ''
+                    self.Direction = ''
+                    self.DirectionStations = ''
+
+                elif 'Direction' in data:
+                    self.Direction = data['Direction']
+                    self.id = ''
+                    self.refNEtex = ''
+                    self.sqlistationId = ''
+                    self.DirectionRef = ''
+                    self.DirectionStations = ''
+
+                elif 'DirectionStations' in data:
+                    self.DirectionStations = data['DirectionStations']
+                    self.id = ''
+                    self.refNEtex = ''
+                    self.sqlistationId = ''
+                    self.DirectionRef = ''
+                    self.Direction = ''
+
+                else :
+                    raise Exception('You must specify at least one information')
+
+                r = eval(requests.get('https://api.rtm.fr/front/getRoutes/'+self.lineRef).text)['data']
+
+                for i in r.keys():
+
+                    if r[i]['id']==self.id or r[i]['refNEtex']==self.refNEtex or r[i]['sqlistationId']==self.sqlistationId or r[i]['DirectionStations']==self.DirectionStations or r[i]['DirectionRef']==self.DirectionRef or r[i]['Direction']==self.Direction :
+                        self.id = r[i]['id']
+                        self.refNEtex = r[i]['refNEtex']
+                        self.sqlistationId = r[i]['sqlistationId']
+                        self.sqlilineNumber = r[i]['sqlilineNumber']
+                        self.pointId = r[i]['pointId']
+                        self.lineId = r[i]['lineId']
+                        self.sqliOrdering = r[i]['sqliOrdering']
+                        self.DirectionRef = r[i]['DirectionRef']
+                        self.Direction = r[i]['Direction']
+                        self.operator = r[i]['operator']
+                        self.lineRef = r[i]['lineRef']
+                        self.DirectionStations = r[i]['DirectionStations']
+                        self.DirectionStationsSqli = r[i]['DirectionStationsSqli']
+                        break
+            
+            else :
+                self.id = data['id']
+                self.refNEtex = data['refNEtex']
+                self.sqlistationId = data['sqlistationId']
+                self.sqlilineNumber = data['sqlilineNumber']
+                self.pointId = data['pointId']
+                self.lineId = data['lineId']
+                self.sqliOrdering = data['sqliOrdering']
+                self.DirectionRef = data['DirectionRef']
+                self.Direction = data['Direction']
+                self.operator = data['operator']
+                self.lineRef = data['lineRef']
+                self.DirectionStations = data['DirectionStations']
+                self.DirectionStationsSqli = data['DirectionStationsSqli']
+
         def __repr__(self):
-            return(json.dumps({'ID':self.ID,'Name':self.name,'parent':str(self.parent)},indent=4))
+            return(json.dumps({'ID':self.lineRef,'Name':self.DirectionStations,'parent':str(self.parent)},indent=4))
 
         def get_stops(self):
-            url = 'https://api.rtm.fr/front/getStations/' + self.RefNETEX
+            url = 'https://api.rtm.fr/front/getStations/' + self.refNEtex
             content = eval(requests.get(url).text)['data']
             stops = []
 
-            for i in range(len(content)) :
-                stops.append(Schedules.BusStop(parent=self,name=content[i]['Name'],ID=content[i]['sqlistationId']))
+            for i in content :
+                stops.append(Schedules.Stop(i,parent=self))
 
             self.stops = stops
             return(stops)
 
-    class BusStop():
-        def __init__(self,parent=None,name:str='',ID:str='0'):
-            self.name=name
-            self.ID=ID
+    class Stop():
+        def __init__(self,data,parent=None):
+            self.Description = data['Description']
+            self.Name = data['Name']
+            self.sqlistationId=data['sqlistationId']
             self.parent=parent
 
         def __repr__(self):
-            return(self.name)
+            return(self.Name)
 
-        def get_schedule(self,date=time.strftime("%Y-%m-%d_%H-%M", time.gmtime())):     #Ask for the next bus if no time specified
+        def get_schedule(self,date=time.strftime("%Y-%m-%d", time.gmtime())):     #Ask for the next bus if no time specified
             url = "https://api.rtm.fr/front/lepilote/GetStopHours/json"                 #Time format must be yyyy-MM-dd or yyyy-MM-dd_HH-mm
-            url += "?StopIds=" + self.ID
+            url += "?StopIds=" + self.sqlistationId
             url += "&DateTime=" + date
-            url += "&LineId=" + self.parent.parent.ID
-            url += "&Direction=" + self.parent.ID
-            content = eval(requests.get(url).text)['Data']['Hours']
+            url += "&LineId=" + self.parent.parent.lepiloteId
+            url += "&Direction=" + self.parent.DirectionRef
+            r = requests.get(url)
+            content = eval(r.text)['Data']['Hours']
             self.schedules = [Schedules.Hour(data,parent=self) for data in content]
             return(self.schedules)
 
@@ -141,6 +258,23 @@ def get_alerts(period='Today',LNE=None):
     else :
         return {'AlertesToday':AlertesToday, 'AlertesComing':AlertesComing}
 
+def get_lines(type='all'):
+    """
+    type=all|bus|metro|tram
+    """
+    if type == 'all':
+        content = {
+            "bus":eval(requests.get('https://api.rtm.fr/front/getLines/bus').text)['data'],
+            "metro":eval(requests.get('https://api.rtm.fr/front/getLines/metro').text)['data'],
+            "tram":eval(requests.get('https://api.rtm.fr/front/getLines/tram').text)['data']
+        }
+
+    else :
+        content = eval(requests.get('https://api.rtm.fr/front/getLines/'+type).text)['data']
+
+    return content
+
+
 
 
 class Alert():
@@ -157,6 +291,6 @@ class Alert():
         self.AffectedLine = []
         for i in data ['AffectedLine'] :
             try :
-                self.AffectedLine.append(BusLine(name=i['PublicCode'],color=i['color']))
+                self.AffectedLine.append(Line({'PublicCode':i['PublicCode']}))
             except Exception as e:
                 print('cannot find',e)
