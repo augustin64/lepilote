@@ -291,7 +291,10 @@ def get_alerts(period='Today',LNE=None):
         url = 'https://api.rtm.fr/front/getAlertes/FR/All'
         content = eval(requests.get(url).text)['data']
         AlertesToday = [Alert(data) for data in content['AlertesToday']]
-        AlertesComing = [Alert(data) for data in content['AlertesComing']]
+        if 'AlertesComing' in content :
+            AlertesComing = [Alert(data) for data in content['AlertesComing']]
+        else :
+            AlertesComing = []
     else :
         url = 'https://api.rtm.fr/front/getAlertes/FR/' + LNE
         content = eval(requests.get(url).text)['data']
