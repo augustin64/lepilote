@@ -258,8 +258,12 @@ class Schedules():
             url += "&LineId=" + self.parent.parent.lepiloteId
             url += "&Direction=" + self.parent.DirectionRef
             r = requests.get(url)
-            content = eval(r.text)['Data']['Hours']
-            self.schedules = [Schedules.Hour(data,parent=self) for data in content]
+            data = eval(r.text)['Data']
+            if str(type(data)) == "<class 'dict'>" :
+                hours = data['Hours']
+                self.schedules = [Schedules.Hour(dt,parent=self) for dt in hours]
+            else :
+                self.schedules = []
             return(self.schedules)
 
     class Hour():
