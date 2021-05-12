@@ -9,6 +9,9 @@ null = None #simplify json responses
 false = False
 true = True
 
+# setting custom headers
+headers = {'User-Agent':'RTM API Python Client', 'From':'https://github.com/augustin64/rtm-api-marseille'}
+
 class Line():
     def __init__(self,data) :
         base_informations = ['name', 'id', 'Carrier', 'Operator', 'PublicCode', 'TypeOfLine', 'VehicleType', 'night', 'lepiloteId', 'color', 'sqliType']
@@ -63,7 +66,7 @@ class Line():
 
     def get_routes(self):
         url = "https://api.rtm.fr/front/getRoutes/" + self.id
-        content = eval(requests.get(url).text)['data']
+        content = eval(requests.get(url, headers=headers).text)['data']
         directions = []
         for i in content.keys():
             directions.append(Schedules.Direction(content[i],parent=self))
@@ -114,7 +117,7 @@ class Schedules():
                 else :
                     raise Exception('You must specify at least one information')
 
-                r = eval(requests.get('https://api.rtm.fr/front/getRoutes/'+self.lineRef).text)['data']
+                r = eval(requests.get('https://api.rtm.fr/front/getRoutes/'+self.lineRef, headers=headers).text)['data']
 
                 for i in r.keys():
 
@@ -154,7 +157,7 @@ class Schedules():
 
         def get_stops(self):
             url = 'https://api.rtm.fr/front/getStations/' + self.refNEtex
-            content = eval(requests.get(url).text)['data']
+            content = eval(requests.get(url, headers=headers).text)['data']
             stops = []
 
             for i in content :
@@ -196,7 +199,7 @@ class Schedules():
                     self.Latitude = data['Latitude']
 
                 url = 'https://api.rtm.fr/front/getStations/' + self.parent.refNEtex
-                content = eval(requests.get(url).text)['data']
+                content = eval(requests.get(url, headers=headers).text)['data']
 
                 for i in content :
                     if (
@@ -260,7 +263,7 @@ class Schedules():
             url += "&DateTime=" + date
             url += "&LineId=" + self.parent.parent.lepiloteId
             url += "&Direction=" + self.parent.DirectionRef
-            r = requests.get(url)
+            r = requests.get(url, headers=headers)
             data = eval(r.text)['Data']
             if str(type(data)) == "<class 'dict'>" :
                 hours = data['Hours']
@@ -296,7 +299,7 @@ def get_alerts(period='Today',LNE=None):
     """
     if LNE == None :
         url = 'https://api.rtm.fr/front/getAlertes/FR/All'
-        content = eval(requests.get(url).text)['data']
+        content = eval(requests.get(url, headers=headers).text)['data']
         AlertesToday = [Alert(data) for data in content['AlertesToday']]
         if 'AlertesComing' in content :
             AlertesComing = [Alert(data) for data in content['AlertesComing']]
@@ -304,7 +307,7 @@ def get_alerts(period='Today',LNE=None):
             AlertesComing = []
     else :
         url = 'https://api.rtm.fr/front/getAlertes/FR/' + LNE
-        content = eval(requests.get(url).text)['data']
+        content = eval(requests.get(url, headers=headers).text)['data']
         AlertesToday = [Alert(data) for data in content['Alertes']]
         AlertesComing = []
 
@@ -321,13 +324,13 @@ def get_lines(type='all'):
     """
     if type == 'all':
         content = {
-            "bus":eval(requests.get('https://api.rtm.fr/front/getLines/bus').text)['data'],
-            "metro":eval(requests.get('https://api.rtm.fr/front/getLines/metro').text)['data'],
-            "tram":eval(requests.get('https://api.rtm.fr/front/getLines/tram').text)['data']
+            "bus":eval(requests.get('https://api.rtm.fr/front/getLines/bus', headers=headers).text)['data'],
+            "metro":eval(requests.get('https://api.rtm.fr/front/getLines/metro', headers=headers).text)['data'],
+            "tram":eval(requests.get('https://api.rtm.fr/front/getLines/tram', headers=headers).text)['data']
         }
 
     else :
-        content = eval(requests.get('https://api.rtm.fr/front/getLines/'+type).text)['data']
+        content = eval(requests.get('https://api.rtm.fr/front/getLines/'+type, headers=headers).text)['data']
 
     return content
 
