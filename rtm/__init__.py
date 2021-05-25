@@ -1,7 +1,10 @@
 from __future__ import unicode_literals
-import requests
+
 import json
 import time
+from xml.etree import ElementTree
+
+import requests
 
 __version__ = (1, 0 ,41 )
 
@@ -253,11 +256,12 @@ class Schedules():
                 self.pmr = data['pmr']
                 self.code3l = data['code3l']
                 self.PdfNameHoraire = data['PdfNameHoraire']
+            
 
         def __repr__(self):
             return(self.Name)
 
-        def get_schedule(self,date=time.strftime("%Y-%m-%d", time.gmtime())):     #Ask for the next bus if no time specified
+        def get_theoric_schedule(self,date=time.strftime("%Y-%m-%d", time.gmtime())):     #Ask for the next bus if no time specified
             url = "https://api.rtm.fr/front/lepilote/GetStopHours/json"                 #Time format must be yyyy-MM-dd or yyyy-MM-dd_HH-mm
             url += "?StopIds=" + self.sqlistationId
             url += "&DateTime=" + date
@@ -270,6 +274,41 @@ class Schedules():
                 self.schedules = [Schedules.Hour(dt,parent=self) for dt in hours]
             else :
                 self.schedules = []
+
+            return(self.schedules)
+
+        def get_realtime_schedule(self,date=time.strftime("%Y-%m-%d", time.gmtime())):     #Ask for the next bus if no time specified
+
+            url = "https://api.rtm.fr/front/spoti/getStationDetails?nomPtReseau=" + self.refNEtex[-5:]
+            response = requests.get(url)
+            tree = ElementTree.fromstring(response.content)
+
+            list = []
+
+            for i in tree :
+                if len(i) == 4 :
+                    t = time.strptime(i[1].text, "%H:%M")
+                    element = { 'AimedArrivalTime': None,
+                                'AimedDepartureTime': None, 
+                                'FrequencyId': None, 
+                                'IsCancelled': False, 
+                                'LineId': self.parent.id, 
+                                'Order': 1, 
+                                'PredictedArrivalTime': None, 
+                                'PredictedDepartureTime': None, 
+                                'RealArrivalTime': None, 
+                                'RealDepartureTime': t.tm_hour * 60 + t.tm_min, 
+                                'RealTimeStatus': 1, 
+                                'Restriction': 0, 
+                                'StopId': self.id, 
+                                'TheoricArrivalTime': None, 
+                                'TheoricDepartureTime': None, 
+                                'VehicleJourneyId': None
+                    }
+
+                    list.append(Schedules.Hour(element,parent=self))
+            
+            self.schedules = list
             return(self.schedules)
 
     class Hour():
