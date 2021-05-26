@@ -278,9 +278,16 @@ class Schedules():
             return(self.schedules)
 
         def get_realtime_schedule(self,date=time.strftime("%Y-%m-%d", time.gmtime())):     #Ask for the next bus if no time specified
-
-            url = "https://api.rtm.fr/front/spoti/getStationDetails?nomPtReseau=" + self.refNEtex[-5:]
-            response = requests.get(url)
+            value = "504 Gateway Time-out"
+            i = 0
+            while '504 Gateway Time-out' in value :     # Si le serveur renvoie une réponse invalide, 
+                i += 1                                  # On effectue jusqu'à 3 requêtes, avant de renvoyer à notre tour une réponse invalide
+                url = "https://api.rtm.fr/front/spoti/getStationDetails?nomPtReseau=" + self.refNEtex[-5:]
+                response = requests.get(url)
+                value = response.text
+                if i >= 3 :
+                    break
+                
             tree = ElementTree.fromstring(response.content)
 
             list = []
@@ -305,8 +312,8 @@ class Schedules():
                                 'TheoricDepartureTime': None, 
                                 'VehicleJourneyId': None
                     }
-
-                    list.append(Schedules.Hour(element,parent=self))
+                    if self.parent.parent.PublicCode == i[0].text :         # if line name is the same as line
+                        list.append(Schedules.Hour(element,parent=self))
             
             self.schedules = list
             return(self.schedules)
