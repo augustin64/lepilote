@@ -2,15 +2,11 @@ import json
 import time
 from typing import List, Dict, Set
 from xml.etree import ElementTree
+from functools import cache
 
 import requests
 
-__version__ = (1, 0, 42)
-
-# Simplify json responses
-null = None
-false = False
-true = True
+__version__ = (1, 0, 43)
 
 # Setting custom headers
 headers = {'User-Agent': 'RTM API Python Client', 'From': 'https://github.com/augustin64/lepilote'}
@@ -119,7 +115,7 @@ class Line:
     def get_routes(self, refresh_list: bool = True) -> List['Schedules.Direction']:
         if self.routes is None or refresh_list:
             url = "https://api.rtm.fr/front/getRoutes/" + self.id
-            content: Dict = eval(requests.get(url, headers=headers).text)['data']
+            content: Dict = json.loads(requests.get(url, headers=headers).text)['data']
             self.routes = [
                 Schedules.Direction(_dir, parent=self) for _dir in content.values()
             ]
@@ -184,7 +180,7 @@ class Schedules:
                 ):
                     raise ValueError('You must specify at least one information')
 
-                r: Dict = eval(
+                r: Dict = json.loads(
                     requests.get(
                         'https://api.rtm.fr/front/getRoutes/' + self.lineRef,
                         headers=headers
@@ -244,7 +240,7 @@ class Schedules:
         def get_stops(self, refresh_list: bool = True) -> List['Schedules.Stop']:
             if self.stops is None or refresh_list:
                 url = 'https://api.rtm.fr/front/getStations/' + self.refNEtex
-                content: List = eval(requests.get(url, headers=headers).text)['data']
+                content: List = json.loads(requests.get(url, headers=headers).text)['data']
                 self.stops = [Schedules.Stop(stop, self) for stop in content]
             return self.stops
 
@@ -286,7 +282,7 @@ class Schedules:
                 self.sqliLepiloteId = data.get('sqliLepiloteId', '')
 
                 url = 'https://api.rtm.fr/front/getStations/' + self.parent.refNEtex
-                content = eval(requests.get(url, headers=headers).text)['data']
+                content = json.loads(requests.get(url, headers=headers).text)['data']
 
                 for stop in content:
                     if (
@@ -355,7 +351,7 @@ class Schedules:
             url += "&LineId=" + self.parent.parent.lepiloteId
             url += "&Direction=" + self.parent.DirectionRef
             r = requests.get(url, headers=headers)
-            data = eval(r.text)['Data']
+            data = json.loads(r.text)['Data']
             if isinstance(data, dict):
                 hours = data['Hours']
                 self.schedules = [Schedules.Hour(dt, parent=self) for dt in hours]
@@ -443,7 +439,7 @@ def get_alerts(period='today', LNE: str = None) -> Dict:  # NOQA Argument name s
     LNE=bus/metro/tram id
     """
     url = f"https://api.rtm.fr/front/getAlertes/FR/{'All' if LNE is None else LNE}"
-    content = eval(requests.get(url, headers=headers).text)['data']
+    content = json.loads(requests.get(url, headers=headers).text)['data']
     alerts = {}
     if period in ['today', 'all']:
         alerts['AlertesToday'] = (
@@ -460,15 +456,16 @@ def get_alerts(period='today', LNE: str = None) -> Dict:  # NOQA Argument name s
     return alerts
 
 
+@cache
 def get_lines(line_type: str = 'all') -> Dict[str, Dict]:
     """
     line_type=all|bus|metro|tram
-    # TODO Store the lines in a cache to avoid making too many calls
+    # TODO Use a better caching technique to reduce redundancy
     """
     assert line_type in ["bus", "metro", "tram", "all"], f"Invalid line type '{line_type}'"
     _lines = ["bus", "metro", "tram"] if line_type == "all" else [line_type]
     return {
-        line: eval(
+        line: json.loads(
             requests.get(f'https://api.rtm.fr/front/getLines/{line}', headers=headers).text
         )['data']
         for line in _lines
